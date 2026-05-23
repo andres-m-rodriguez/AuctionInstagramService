@@ -1,0 +1,54 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">AuctionInstagramService</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="auctions">
+                <span class="bi bi-tag-fill" aria-hidden="true"></span> Auctions
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+
+        <hr class="border-secondary mx-3 my-2" />
+
+        <AuthorizeView>
+            <Authorized Context="auth">
+                <div class="nav-item px-3 text-white-50 small">
+                    Signed in as <strong>@auth.User.Identity?.Name</strong>
+                </div>
+                <div class="nav-item px-3">
+                    <form method="post" action="/auth/logout">
+                        <AntiforgeryToken />
+                        <button type="submit" class="btn btn-link nav-link p-0">
+                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Sign out
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Sign in
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>

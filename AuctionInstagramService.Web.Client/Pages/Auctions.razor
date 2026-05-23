@@ -1,0 +1,150 @@
+@page "/auctions"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AuctionsClient Api
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Auctions</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">Auctions</h1>
+    </div>
+
+    @if (loading)
+    {
+        <div class="d-flex align-items-center text-muted">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Loading…
+        </div>
+    }
+    else if (auctions is null || auctions.Count == 0)
+    {
+        <div class="alert alert-info">No auctions yet — create one below.</div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+            @foreach (var a in auctions)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">
+                                    <a href="auctions/@a.Id" class="text-decoration-none">@a.Title</a>
+                                </h5>
+                                <span class="badge text-bg-@StatusBadge(a.Status)">@a.Status</span>
+                            </div>
+                            <p class="card-text small text-muted mb-2">@a.Description</p>
+                            <p class="card-text mb-1">
+                                <strong>@a.StartingPrice.ToString("C")</strong> starting
+                            </p>
+                            <p class="card-text mb-1">
+                                Highest:
+                                <strong>@(a.CurrentHighestBid?.ToString("C") ?? "—")</strong>
+                            </p>
+                            <p class="card-text small text-muted mb-0">by @a.CreatedByUserId</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="h4 mb-3">Create auction</h2>
+            <EditForm Model="form" OnValidSubmit="HandleCreate" FormName="create-auction">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Title</label>
+                        <InputText class="form-control" @bind-Value="form.Title" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Starting price</label>
+                        <InputNumber class="form-control" @bind-Value="form.StartingPrice" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <InputText class="form-control" @bind-Value="form.Description" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Starts</label>
+                        <InputDate class="form-control" Type="InputDateType.DateTimeLocal" @bind-Value="form.StartsAt" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ends</label>
+                        <InputDate class="form-control" Type="InputDateType.DateTimeLocal" @bind-Value="form.EndsAt" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <InputSelect class="form-select" @bind-Value="form.Status">
+                            @foreach (var s in Enum.GetValues<AuctionStatus>())
+                            {
+                                <option value="@s">@s</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    bool loading = true;
+    IReadOnlyList<AuctionDto>? auctions;
+    readonly CancellationTokenSource cts = new();
+    CreateForm form = new();
+
+    sealed class CreateForm
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal StartingPrice { get; set; } = 1;
+        public DateTime StartsAt { get; set; } = DateTime.Now;
+        public DateTime EndsAt { get; set; } = DateTime.Now.AddDays(7);
+        public AuctionStatus Status { get; set; } = AuctionStatus.Open;
+    }
+
+    static string StatusBadge(AuctionStatus s) => s switch
+    {
+        AuctionStatus.Open => "success",
+        AuctionStatus.Draft => "secondary",
+        AuctionStatus.Closed => "dark",
+        AuctionStatus.Cancelled => "danger",
+        _ => "light",
+    };
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        loading = true;
+        auctions = await Api.ListAsync(cts.Token);
+        loading = false;
+    }
+
+    async Task HandleCreate()
+    {
+        var dto = new AuctionDto(
+            Id: Guid.Empty,
+            Title: form.Title,
+            Description: form.Description,
+            StartingPrice: form.StartingPrice,
+            StartsAt: form.StartsAt,
+            EndsAt: form.EndsAt,
+            CreatedByUserId: "",
+            Status: form.Status,
+            CurrentHighestBid: null);
+        var created = await Api.CreateAsync(dto, cts.Token);
+        Nav.NavigateTo($"auctions/{created.Id}");
+    }
+
+    public void Dispose() => cts.Cancel();
+}

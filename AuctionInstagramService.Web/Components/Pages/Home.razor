@@ -1,0 +1,24 @@
+@page "/"
+@using AuctionInstagramService.Contracts
+@inject ICurrentUser CurrentUser
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<AuthorizeView>
+    <Authorized>
+        <p>Signed in as <strong>@user.DisplayName</strong> (id: <code>@user.UserId</code>)</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>Not signed in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private UserContext user = new("anonymous", "Anonymous", []);
+
+    protected override void OnInitialized() => user = CurrentUser.Get();
+}

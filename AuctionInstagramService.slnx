@@ -1,0 +1,17 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="AuctionInstagramService.ApiService/AuctionInstagramService.ApiService.csproj" />
+  <Project Path="AuctionInstagramService.AppHost/AuctionInstagramService.AppHost.csproj" />
+  <Project Path="AuctionInstagramService.Application.Client/AuctionInstagramService.Application.Client.csproj" />
+  <Project Path="AuctionInstagramService.Contracts/AuctionInstagramService.Contracts.csproj" />
+  <Project Path="AuctionInstagramService.DataAccess/AuctionInstagramService.DataAccess.csproj" />
+  <Project Path="AuctionInstagramService.Database/AuctionInstagramService.Database.csproj" />
+  <Project Path="AuctionInstagramService.ServiceDefaults/AuctionInstagramService.ServiceDefaults.csproj" />
+  <Project Path="AuctionInstagramService.StreamingService/AuctionInstagramService.StreamingService.csproj" />
+  <Project Path="AuctionInstagramService.Web.Client/AuctionInstagramService.Web.Client.csproj" />
+  <Project Path="AuctionInstagramService.Web/AuctionInstagramService.Web.csproj" />
+</Solution>

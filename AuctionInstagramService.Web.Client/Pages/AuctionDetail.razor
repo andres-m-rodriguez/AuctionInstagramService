@@ -1,0 +1,213 @@
+@page "/auctions/{Id:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AuctionsClient Api
+@inject AuctionImagesClient ImagesApi
+@inject BidsClient Bids
+@implements IAsyncDisposable
+
+<PageTitle>Auction</PageTitle>
+
+<div class="container py-4">
+    @if (auction is null)
+    {
+        <div class="d-flex align-items-center text-muted">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Loading…
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h1 class="mb-1">@auction.Title</h1>
+                <p class="text-muted mb-0">@auction.Description</p>
+            </div>
+            <span class="badge text-bg-@StatusBadge(auction.Status) fs-6">@auction.Status</span>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted">Starting price</h6>
+                        <p class="card-text fs-4 fw-bold mb-0">@auction.StartingPrice.ToString("C")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted">Highest bid</h6>
+                        <p class="card-text fs-4 fw-bold mb-0">
+                            @(auction.CurrentHighestBid?.ToString("C") ?? "—")
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted">Ends</h6>
+                        <p class="card-text fs-6 mb-0">@auction.EndsAt.ToLocalTime().ToString("g")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Images</h2>
+                @if (images is null || images.Count == 0)
+                {
+                    <p class="text-muted">No images yet.</p>
+                }
+                else
+                {
+                    <div class="row row-cols-2 row-cols-md-4 g-2 mb-3">
+                        @foreach (var img in images)
+                        {
+                            <div class="col">
+                                <img src="@ImagesApi.UrlFor(img.Id)" alt="" class="img-thumbnail w-100" style="object-fit:cover; aspect-ratio:1/1;" />
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="d-flex align-items-center gap-2">
+                    <InputFile OnChange="OnFileSelected" multiple class="form-control" />
+                    @if (uploading)
+                    {
+                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Place bid</h2>
+                <div class="input-group mb-2" style="max-width:360px;">
+                    <span class="input-group-text">$</span>
+                    <input @bind="bidAmount" type="number" step="0.01" class="form-control" />
+                    <button class="btn btn-primary" @onclick="HandlePlaceBid">Bid</button>
+                </div>
+                @if (bidError is not null)
+                {
+                    <div class="alert alert-danger py-2 mb-0">@bidError</div>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Live bids</h2>
+                @if (liveBids.Count == 0)
+                {
+                    <p class="text-muted mb-0">Waiting for bids…</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var b in liveBids)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>@b.Amount.ToString("C")</strong> — @b.BidderUserId</span>
+                                <small class="text-muted">@b.PlacedAt.ToLocalTime().ToString("HH:mm:ss")</small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    AuctionDto? auction;
+    IReadOnlyList<AuctionImageDto>? images;
+    decimal bidAmount;
+    string? bidError;
+    bool uploading;
+    readonly List<BidDto> liveBids = new();
+
+    CancellationTokenSource? streamCts;
+    Task? streamTask;
+
+    static string StatusBadge(AuctionStatus s) => s switch
+    {
+        AuctionStatus.Open => "success",
+        AuctionStatus.Draft => "secondary",
+        AuctionStatus.Closed => "dark",
+        AuctionStatus.Cancelled => "danger",
+        _ => "light",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        auction = await Api.GetAsync(Id);
+        images = await ImagesApi.ListForAuctionAsync(Id);
+        StartStream();
+    }
+
+    async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        uploading = true;
+        foreach (var file in e.GetMultipleFiles(maximumFileCount: 10))
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            await ImagesApi.UploadAsync(Id, stream, file.Name, file.ContentType);
+        }
+        images = await ImagesApi.ListForAuctionAsync(Id);
+        uploading = false;
+    }
+
+    async Task HandlePlaceBid()
+    {
+        bidError = null;
+        var resp = await Bids.PlaceAsync(Id, bidAmount);
+        if (resp.IsSuccessStatusCode) return;
+
+        try
+        {
+            var body = await resp.Content.ReadFromJsonAsync<ApiError>();
+            bidError = body?.Error ?? "Couldn't place your bid. Please try again.";
+        }
+        catch
+        {
+            bidError = "Couldn't place your bid. Please try again.";
+        }
+    }
+
+    record ApiError(string Error);
+
+    void StartStream()
+    {
+        streamCts = new CancellationTokenSource();
+        streamTask = ConsumeAsync(streamCts.Token);
+    }
+
+    async Task ConsumeAsync(CancellationToken ct)
+    {
+        try
+        {
+            await foreach (var bid in Bids.StreamAsync(Id, ct))
+            {
+                liveBids.Insert(0, bid);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        streamCts?.Cancel();
+        if (streamTask is not null)
+        {
+            try { await streamTask; } catch { }
+        }
+        streamCts?.Dispose();
+    }
+}
