@@ -3,7 +3,6 @@ using System.Text.Json;
 using AuctionInstagramService.Contracts;
 using AuctionInstagramService.Database;
 using AuctionInstagramService.Database.Entities;
-using AuctionInstagramService.Messaging;
 using Microsoft.EntityFrameworkCore;
 using OneOf;
 
@@ -83,7 +82,7 @@ public sealed class BidService(AuctionDbContext db)
         {
             Id = Guid.CreateVersion7(),
             EventType = nameof(BidMadeEvent),
-            Channel = BidChannels.For(auctionId),
+            AggregateId = auctionId,
             Payload = JsonSerializer.Serialize(new BidMadeEvent(dto)),
             OccurredAt = DateTimeOffset.UtcNow,
             ProcessedAt = null,

@@ -1,4 +1,6 @@
+using AuctionInstagramService.Contracts;
 using AuctionInstagramService.Database;
+using AuctionInstagramService.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +16,12 @@ public sealed class OutboxDispatcher(
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private const int BatchSize = 64;
+
+    private static string? ResolveChannel(string eventType, Guid aggregateId) => eventType switch
+    {
+        nameof(BidMadeEvent) => BidChannels.For(aggregateId),
+        _ => null,
+    };
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -43,7 +51,7 @@ public sealed class OutboxDispatcher(
             .Where(e => e.ProcessedAt == null)
             .OrderBy(e => e.OccurredAt)
             .Take(BatchSize)
-            .Select(e => new { e.Id, e.Channel, e.Payload })
+            .Select(e => new { e.Id, e.EventType, e.AggregateId, e.Payload })
             .ToListAsync(ct);
 
         if (pending.Count == 0) return;
@@ -51,7 +59,17 @@ public sealed class OutboxDispatcher(
         var subscriber = redis.GetSubscriber();
         foreach (var evt in pending)
         {
-            await subscriber.PublishAsync(RedisChannel.Literal(evt.Channel), evt.Payload);
+            var channel = ResolveChannel(evt.EventType, evt.AggregateId);
+            if (channel is null)
+            {
+                logger.LogWarning("Unknown outbox event type '{EventType}' (id {Id}); marking processed to unblock queue.",
+                    evt.EventType, evt.Id);
+            }
+            else
+            {
+                await subscriber.PublishAsync(RedisChannel.Literal(channel), evt.Payload);
+            }
+
             await db.OutboxEvents
                 .Where(e => e.Id == evt.Id)
                 .ExecuteUpdateAsync(
