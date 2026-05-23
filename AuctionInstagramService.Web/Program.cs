@@ -100,7 +100,7 @@ app.UseOutputCache();
 
 app.MapStaticAssets();
 
-app.MapPost("/auth/login", async (HttpContext ctx, [FromForm] string username) =>
+app.MapPost("/auth/login", async (HttpContext ctx, [FromForm] string username, [FromForm] string? returnUrl) =>
 {
     if (string.IsNullOrWhiteSpace(username))
         return Results.Redirect("/login");
@@ -112,7 +112,14 @@ app.MapPost("/auth/login", async (HttpContext ctx, [FromForm] string username) =
     };
     var identity = new ClaimsIdentity(claims, CookieAuthExtensions.SchemeName);
     await ctx.SignInAsync(CookieAuthExtensions.SchemeName, new ClaimsPrincipal(identity));
-    return Results.Redirect("/");
+
+    // Only allow same-site relative paths back; reject anything that could be an open redirect.
+    var target = !string.IsNullOrEmpty(returnUrl)
+        && !returnUrl.StartsWith("//")
+        && !returnUrl.Contains(':')
+        ? "/" + returnUrl.TrimStart('/')
+        : "/";
+    return Results.Redirect(target);
 });
 
 app.MapPost("/auth/logout", async (HttpContext ctx) =>
