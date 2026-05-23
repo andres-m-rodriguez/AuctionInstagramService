@@ -3,7 +3,14 @@
 @code {
     protected override void OnInitialized()
     {
-        var returnUrl = Uri.EscapeDataString(Nav.ToBaseRelativePath(Nav.Uri));
+        var current = Nav.ToBaseRelativePath(Nav.Uri);
+        var path = current.Split('?', 2)[0].TrimEnd('/');
+
+        // Guard against redirecting to /login from /login itself.
+        if (path.Equals("login", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var returnUrl = Uri.EscapeDataString(current);
         Nav.NavigateTo($"login?returnUrl={returnUrl}", forceLoad: true);
     }
 }
