@@ -95,13 +95,13 @@ First boot creates the Postgres schema via `MigrateAsync` on ApiService startup.
 ## What's intentionally not built
 
 - Real authentication (OIDC, password store, etc.) — see "Identity flow" above for the swap point
-- Image CDN — currently every image read flows through ApiService. At scale put Azure Front Door in front of the blob container
-- Bid history pagination
-- Auction state machine transitions (Draft → Open → Closed)
+- Image CDN — currently every image read flows through ApiService. At scale put Azure Front Door in front of the blob container (We might change this)
+- Bid history pagination (Might add this later)
+- Auction state machine transitions (Draft → Open → Closed) (Needs refactor) 
 - Outbox pattern for Redis publish — if Redis is down right after commit, subscribers miss that bid
 
 See `SCALING.md` for the reading list to fix each of these properly.
 
 ## Tech
 
-.NET 10 · Aspire 13 · Blazor Web App (Server + WASM) · YARP · EF Core 10 · Npgsql · StackExchange.Redis · Azure.Storage.Blobs · OneOf · System.Net.ServerSentEvents · Bootstrap 5
+.NET 10 · Aspire 13 · Blazor Web App (Server bff + WASM) · YARP  · Npgsql · StackExchange.Redis · Azure.Storage.Blobs 
