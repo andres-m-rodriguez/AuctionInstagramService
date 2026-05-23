@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
 using AuctionInstagramService.Contracts;
+using AuctionInstagramService.Messaging;
 using AuctionInstagramService.ServiceDefaults.Auth;
 using StackExchange.Redis;
 
@@ -37,8 +38,8 @@ static async IAsyncEnumerable<BidDto> StreamBids(
     await subscriber.SubscribeAsync(redisChannel, (_, msg) =>
     {
         if (!msg.HasValue) return;
-        var bid = JsonSerializer.Deserialize<BidDto>((string)msg!);
-        if (bid is not null) channel.Writer.TryWrite(bid);
+        var evt = JsonSerializer.Deserialize<BidMadeEvent>((string)msg!);
+        if (evt is not null) channel.Writer.TryWrite(evt.Bid);
     });
 
     try

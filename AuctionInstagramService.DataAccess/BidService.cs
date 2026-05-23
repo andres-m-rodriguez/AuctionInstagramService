@@ -3,6 +3,7 @@ using System.Text.Json;
 using AuctionInstagramService.Contracts;
 using AuctionInstagramService.Database;
 using AuctionInstagramService.Database.Entities;
+using AuctionInstagramService.Messaging;
 using Microsoft.EntityFrameworkCore;
 using OneOf;
 using StackExchange.Redis;
@@ -37,7 +38,7 @@ public sealed class BidService(AuctionDbContext db, IConnectionMultiplexer redis
         {
             await redis.GetSubscriber().PublishAsync(
                 RedisChannel.Literal(BidChannels.For(auctionId)),
-                JsonSerializer.Serialize(result.AsT0));
+                JsonSerializer.Serialize(new BidMadeEvent(result.AsT0)));
         }
 
         return result;

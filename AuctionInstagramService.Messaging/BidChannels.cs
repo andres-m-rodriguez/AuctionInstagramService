@@ -1,4 +1,4 @@
-namespace AuctionInstagramService.Contracts;
+namespace AuctionInstagramService.Messaging;
 
 public static class BidChannels
 {

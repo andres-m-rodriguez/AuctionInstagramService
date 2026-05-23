@@ -10,6 +10,8 @@
   <Project Path="AuctionInstagramService.Contracts/AuctionInstagramService.Contracts.csproj" />
   <Project Path="AuctionInstagramService.DataAccess/AuctionInstagramService.DataAccess.csproj" />
   <Project Path="AuctionInstagramService.Database/AuctionInstagramService.Database.csproj" />
+  <Project Path="AuctionInstagramService.Identity.Contract/AuctionInstagramService.Identity.Contract.csproj" />
+  <Project Path="AuctionInstagramService.Messaging/AuctionInstagramService.Messaging.csproj" />
   <Project Path="AuctionInstagramService.ServiceDefaults/AuctionInstagramService.ServiceDefaults.csproj" />
   <Project Path="AuctionInstagramService.StreamingService/AuctionInstagramService.StreamingService.csproj" />
   <Project Path="AuctionInstagramService.Web.Client/AuctionInstagramService.Web.Client.csproj" />

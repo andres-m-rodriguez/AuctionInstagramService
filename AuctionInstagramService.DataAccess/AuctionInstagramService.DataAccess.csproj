@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AuctionInstagramService.Contracts\AuctionInstagramService.Contracts.csproj" />
     <ProjectReference Include="..\AuctionInstagramService.Database\AuctionInstagramService.Database.csproj" />
+    <ProjectReference Include="..\AuctionInstagramService.Messaging\AuctionInstagramService.Messaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>
