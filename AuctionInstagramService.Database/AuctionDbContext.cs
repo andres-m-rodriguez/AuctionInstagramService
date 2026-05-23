@@ -9,4 +9,5 @@ public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbCo
     public DbSet<AuctionImage> AuctionImages => Set<AuctionImage>();
     public DbSet<Bid> Bids => Set<Bid>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 }

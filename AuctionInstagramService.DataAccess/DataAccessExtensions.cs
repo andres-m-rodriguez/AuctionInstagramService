@@ -10,6 +10,7 @@ public static class DataAccessExtensions
         services.AddScoped<AuctionImageService>();
         services.AddScoped<BidService>();
         services.AddHostedService<OutboxDispatcher>();
+        services.AddHostedService<AuctionClosingService>();
         return services;
     }
 }
