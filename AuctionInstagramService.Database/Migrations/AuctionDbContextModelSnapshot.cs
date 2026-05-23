@@ -138,6 +138,34 @@ namespace AuctionInstagramService.Database.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("AuctionInstagramService.Database.Entities.OutboxEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OutboxEvents");
+                });
+
             modelBuilder.Entity("AuctionInstagramService.Database.Entities.AuctionImage", b =>
                 {
                     b.HasOne("AuctionInstagramService.Database.Entities.Auction", "Auction")

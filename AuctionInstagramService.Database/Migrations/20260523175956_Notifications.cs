@@ -26,6 +26,22 @@ namespace AuctionInstagramService.Database.Migrations
                 {
                     table.PrimaryKey("PK_Notifications", x => x.Id);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "OutboxEvents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventType = table.Column<string>(type: "text", nullable: false),
+                    AggregateId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Payload = table.Column<string>(type: "text", nullable: false),
+                    OccurredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ProcessedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OutboxEvents", x => x.Id);
+                });
         }
 
         /// <inheritdoc />
@@ -33,6 +49,9 @@ namespace AuctionInstagramService.Database.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "OutboxEvents");
         }
     }
 }
