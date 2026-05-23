@@ -6,11 +6,10 @@ using AuctionInstagramService.Database.Entities;
 using AuctionInstagramService.Messaging;
 using Microsoft.EntityFrameworkCore;
 using OneOf;
-using StackExchange.Redis;
 
 namespace AuctionInstagramService.DataAccess;
 
-public sealed class BidService(AuctionDbContext db, IConnectionMultiplexer redis)
+public sealed class BidService(AuctionDbContext db)
 {
     public async Task<IReadOnlyList<BidDto>> ListForAuctionAsync(
         Guid auctionId,
@@ -22,27 +21,16 @@ public sealed class BidService(AuctionDbContext db, IConnectionMultiplexer redis
             .Select(b => new BidDto(b.Id, b.AuctionId, b.BidderUserId, b.Amount, b.PlacedAt))
             .ToListAsync(ct);
 
-    public async Task<
+    public Task<
         OneOf<BidDto, AuctionNotFound, AuctionNotOpen, AuctionEnded, BidTooLow>
     > PlaceAsync(
         Guid auctionId,
         decimal amount,
         string bidderUserId,
         CancellationToken ct = default
-    )
-    {
-        var result = await db.Database.CreateExecutionStrategy().ExecuteAsync(
+    ) =>
+        db.Database.CreateExecutionStrategy().ExecuteAsync(
             () => PlaceCoreAsync(auctionId, amount, bidderUserId, ct));
-
-        if (result.IsT0)
-        {
-            await redis.GetSubscriber().PublishAsync(
-                RedisChannel.Literal(BidChannels.For(auctionId)),
-                JsonSerializer.Serialize(new BidMadeEvent(result.AsT0)));
-        }
-
-        return result;
-    }
 
     private async Task<
         OneOf<BidDto, AuctionNotFound, AuctionNotOpen, AuctionEnded, BidTooLow>
@@ -89,6 +77,18 @@ public sealed class BidService(AuctionDbContext db, IConnectionMultiplexer redis
             PlacedAt = DateTimeOffset.UtcNow,
         };
         db.Bids.Add(bid);
+
+        var dto = new BidDto(bid.Id, bid.AuctionId, bid.BidderUserId, bid.Amount, bid.PlacedAt);
+        db.OutboxEvents.Add(new OutboxEvent
+        {
+            Id = Guid.CreateVersion7(),
+            EventType = nameof(BidMadeEvent),
+            Channel = BidChannels.For(auctionId),
+            Payload = JsonSerializer.Serialize(new BidMadeEvent(dto)),
+            OccurredAt = DateTimeOffset.UtcNow,
+            ProcessedAt = null,
+        });
+
         await db.SaveChangesAsync(ct);
 
         await db.Auctions
@@ -97,6 +97,6 @@ public sealed class BidService(AuctionDbContext db, IConnectionMultiplexer redis
 
         await tx.CommitAsync(ct);
 
-        return new BidDto(bid.Id, bid.AuctionId, bid.BidderUserId, bid.Amount, bid.PlacedAt);
+        return dto;
     }
 }
